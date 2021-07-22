@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from math import *
 
 ANGLE_ACCURACY = 200
-FRB_THRESHHOLD = 0.5
+SIGMA_DETECTION_VALUE = 3
 
 class Data:
     def __init__(self):
@@ -45,19 +45,21 @@ class FRBDetector:
             else: f = min( abs((h//2-1)/t), w//2-1 )
 
             self.intersects.append(((pi/2 - theta)%pi, self.__pixelIntersections((t*f, f), (-t*f, -f))))
-            self.weights.append( len(self.intersects[-1][1]) )
+            self.weights.append([])
 
         self.w, self.h = w, h
 
     def detect(self, frame):
-        for line, weight in zip(self.intersects, self.weights ):
+        for line, weights in zip(self.intersects, self.weights):
             S = 0
             for pixel in line[1]:
                 S += frame[self.w//2 + pixel[0]][self.h//2 + pixel[1]]
             
-            S /= weight
+            S /= len(self.intersects[1])
+            if len(weights) < 32: weights.append(S)
+            else: weights = weights[1:len(weights)] + [S]
 
-            if S >= FRB_THRESHHOLD:
+            if S >= sum(weights)/len(weights) + SIGMA_DETECTION_VALUE*sqrt(S):
                 return ( line[0], S )
         
         return None
