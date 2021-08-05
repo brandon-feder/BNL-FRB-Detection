@@ -16,7 +16,7 @@ struct DETECTFRB
     uint32_t nt;
     uint32_t nf;
 
-    // Detection angle change and number
+    // Detection angle chandge and number
     float dtheta;
     uint32_t nAngles;
 
@@ -43,5 +43,5 @@ struct DETECTFRB
 uint32_t pixelsOnSegment( uint32_t *x, uint32_t *y, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2 );
 DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t dtheta_, uint32_t n_ );
 uint32_t *nextData( DETECTFRB *detector );
-bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma );
+bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma, uint32_t count );
 void freeDetector( DETECTFRB *detector );

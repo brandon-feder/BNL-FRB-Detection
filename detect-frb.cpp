@@ -115,7 +115,7 @@ uint32_t *nextData( DETECTFRB *detector )
     return detector->data + detector->nf * detector->p;
 }
 
-bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma )
+bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma, uint32_t count )
 {
     bool detected = false;
     
@@ -134,36 +134,34 @@ bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma )
             int32_t y = Y[j];
 
             S += detector->data[ 
-                ( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt +
-                (uint32_t)( y + detector->nf/2 ) * detector->nf 
+                (uint32_t)( y + detector->nf/2 ) +
+                (( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt ) * detector->nf 
             ];
-            // printf("%u\n", detector->data[ 
-            //     ( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt +
-            //     (uint32_t)( y + detector->nf/2 ) * detector->nf 
-            // ]);
         }
         S /= L;
+        // printf("A\n");
 
         // Calculate the mean
         float mean = 0;
-        for( uint32_t j = 0; j < detector->nt; ++j ) mean += detector->prevWeights[ j + i*detector->nAngles ];
+        for( uint32_t j = 0; j < detector->nt; ++j ) mean += detector->prevWeights[ j*detector->nAngles + i ];
         mean /= detector->nt;
 
+        // printf("B\n");
         // Calculate the variance 
         float variance = 0;
-        for( uint32_t j = 0; j < detector->nt; ++j ) variance += pow( detector->prevWeights[ j + i*detector->nAngles ] - mean , 2);
+        for( uint32_t j = 0; j < detector->nt; ++j ) variance += pow( detector->prevWeights[ j*detector->nAngles + i ] - mean , 2);
         variance /= detector->nt;
 
         // Update previous weights
-        detector->prevWeights[ detector->p + i*detector->nAngles ] = S;
+        detector->prevWeights[ detector->p*detector->nAngles + i ] = S;
 
         // Was FRB detected
-        // printf("%f\n", S - (mean + sigma * sqrt( variance )));
         if( S >= mean + sigma * sqrt( variance ) )
         {
             *angle = detector->angles[i];
             detected = true;
         }
+        // printf("C\n");
     }
 
     detector->p += 1;

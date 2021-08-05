@@ -44,11 +44,11 @@ void brandonNthSample( uint32_t *sample, uint32_t n, uint32_t nf, uint32_t x1, u
 
 #define SAMPLE_FUNCTION brandonNthSample // The test function
 #define MAX_SAMPLE_WEIGHT 256 // The max weight of any given sample
-#define FRB_FACTOR 10 // The factor to multiply the FRB by so that it stands out ( > 1 )
-#define TEST_SIZE 128 // The number of time samples to run the test through ( > NTS )
-#define NTS 32 // Number of time samples in buffer
-#define NFS 32 // Number of frequency samples per time sample
-#define N_ANGLES 50 // The number of angles used when detecting the FRB
+#define FRB_FACTOR 2 // The factor to multiply the FRB by so that it stands out ( > 1 )
+#define TEST_SIZE 10*512 // The number of time samples to run the test through ( > NTS )
+#define NTS 128 // Number of time samples in buffer
+#define NFS 128 // Number of frequency samples per time sample
+#define N_ANGLES 200 // The number of angles used when detecting the FRB
 #define OUTPUT_DATA_IMAGE true // Whether to output the data as an image
 #define DATA_IMAGE_PATH "./test-data.pgm" // Where to output the data image
 
@@ -73,15 +73,15 @@ int main(int argc, char *argv[])
     printf("Info: Getting FRB line segment\n");
     uint32_t x1, y1, x2, y2;
     float theta = M_PI * (float)(rand()%10000)/10000;
-    uint32_t offset = rand()%(TEST_SIZE - NTS);
+    uint32_t offset = rand()%(TEST_SIZE - 3*NTS) + 2*NTS;
 
     float xl = 0.3*(float)NFS * cos(theta);
     float yl = 0.3*(float)NFS * sin(theta);
     
-    x1 = offset + (uint32_t)(NTS/2 + -xl); y1 = (uint32_t)(NFS/2 + -yl);
-    x2 = offset + (uint32_t)(NTS/2 + xl); y2 = (uint32_t)(NFS/2 + yl);
+    x1 = offset-xl; y1 = (uint32_t)(NFS/2 + -yl);
+    x2 = offset+xl; y2 = (uint32_t)(NFS/2 + yl);
 
-    printf("Info: FRB at %u at an angle of %f \n", offset+NTS/2, theta);
+    printf("Info: FRB at %u at an angle of %f \n", offset, theta);
     
     // If true, outputs data in pgm format at DATA_IMAGE_PATH
     if(OUTPUT_DATA_IMAGE)
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         for( uint32_t x = 0; x < TEST_SIZE; ++x )
             SAMPLE_FUNCTION( test_data+x*NFS, x, NFS, x1, y1, x2, y2 );
 
-        saveP2Image( DATA_IMAGE_PATH, TEST_SIZE, NFS, test_data, MAX_SAMPLE_WEIGHT );
+        saveP2Image( DATA_IMAGE_PATH, TEST_SIZE, NFS, test_data, MAX_SAMPLE_WEIGHT, 0 );
 
         free(test_data);
     }
@@ -103,10 +103,13 @@ int main(int argc, char *argv[])
     {
         uint32_t *next = nextData( &detector );
         SAMPLE_FUNCTION( next, x, NFS, x1, y1, x2, y2 );
-        bool isFRB = detectFRB( &detector, &angle, 7 );
+        bool isFRB = detectFRB( &detector, &angle, 7, x );
 
         // printf("%p\n", next);
-        if( isFRB ) printf( "FRB at %u and angle %f!\n", x, angle );
+        if( isFRB && x > 2 * NTS ) 
+        {
+            printf( "FRB at %u and angle %f!\n", x - NTS/2, angle );
+        }
     }
 
     // Cleaning up
@@ -145,9 +148,9 @@ void brandonNthSample(
     for( uint32_t i = 0; i < nf; ++i )
     {
         // Set the sample to some random value in [0, MAX_SAMPLE_WEIGHT/FRB_FACTOR)
-        sample[i] = 0; //((uint32_t)rand()%MAX_SAMPLE_WEIGHT)/FRB_FACTOR;
+        sample[i] = ((uint32_t)rand()%MAX_SAMPLE_WEIGHT)/FRB_FACTOR;
 
         // If the point is on the FRB, linearly map it to [0, MAX_SAMPLE_WEIGHT)
-        if( isOnSegment(n, i, x1, y1, x2, y2 ) ) sample[i] = MAX_SAMPLE_WEIGHT; //*= FRB_FACTOR;
+        if( isOnSegment(n, i, x1, y1, x2, y2 ) ) sample[i] *= FRB_FACTOR;
     }
 }

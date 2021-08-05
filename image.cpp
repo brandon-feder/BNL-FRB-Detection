@@ -19,7 +19,7 @@ void saveP2Image(
     const char *fp, 
     uint32_t w, uint32_t h, 
     uint32_t *image, 
-    uint32_t M )
+    uint32_t M, uint32_t p )
 {
     // Open the image for writing
     FILE *f = fopen(fp, "w");
@@ -30,5 +30,5 @@ void saveP2Image(
     // Write grayscale values
     for( uint32_t x = 0; x < h; ++x )
         for( uint32_t y = 0; y < w; ++y )
-            fprintf(f, "%u ", image[x + y*h] );
+            fprintf(f, "%u ", image[x + ( (y+p)%w )*h] );
 }
