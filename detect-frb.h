@@ -20,9 +20,6 @@ struct DETECTFRB
     float dtheta;
     uint32_t nAngles;
 
-    // Whether to start the detection ( whether the data buffer is full )
-    bool detect = false;
-
     // Position of the next data
     uint32_t p = 0;
 
@@ -38,10 +35,13 @@ struct DETECTFRB
 
     // Data buffer
     uint32_t *data;
+
+    // The angle saves
+    float  *prevWeights;
 };
 
 uint32_t pixelsOnSegment( uint32_t *x, uint32_t *y, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2 );
-DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t dtheta_ );
+DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t dtheta_, uint32_t n_ );
 uint32_t *nextData( DETECTFRB *detector );
-bool detectFRB( DETECTFRB *detector, float *angle );
+bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma );
 void freeDetector( DETECTFRB *detector );

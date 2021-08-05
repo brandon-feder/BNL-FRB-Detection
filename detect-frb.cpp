@@ -24,7 +24,6 @@
     #include "detect-frb.h"
 #endif
 
-
 // Writes all pixels on the segment (x1, y1) to (x2, y2) to the X and Y arrays.
 // X and Y should have length at least `max( |x2 - x1|, |y2 - y1| )-1`
 void pixelsOnSegment( 
@@ -106,43 +105,71 @@ DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t nAngles_ )
     detector.xIntersections = xIntersects_;
     detector.yIntersections = yIntersects_;
     detector.data = ( uint32_t * ) malloc( sizeof(uint32_t) * nt_ * nf_ );
+    detector.prevWeights = ( float * ) malloc( sizeof(float) * nt_ * nAngles_ );
 
     return detector;
 }
 
 uint32_t *nextData( DETECTFRB *detector )
 {
-    uint32_t *res = detector->data + detector->nf * detector->p;
-    detector->p += 1;
-    detector->p %= detector->nt;
-    detector->detect = detector->p || (detector->p == detector->nt-1);
-
-    return res;
+    return detector->data + detector->nf * detector->p;
 }
 
-bool detectFRB( DETECTFRB *detector, float *angle )
-{   
-    if( detector->detect )
+bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma )
+{
+    bool detected = false;
+    
+    for( uint32_t i = 0; i < detector->nAngles; ++i ) // For each angle
     {
-        for( uint32_t i = 0; i < detector.nAngles; ++i )
+        // Define some variables to make things easier
+        int32_t *X = detector->xIntersections[i];
+        int32_t *Y = detector->yIntersections[i];
+        uint32_t L = detector->lengths[i];
+        
+        // Calculate the average sample value along current line
+        float S = 0;
+        for( uint32_t j = 0; j < L; ++j )
         {
-            int32_t *X = detector.xIntersections[i];
-            int32_t *Y = detector.yIntersections[i];
-            uint32_t L = detector.lengths[i];
+            int32_t x = X[j];
+            int32_t y = Y[j];
 
-            float S = 0;
-            for( uint32_t j = 0; j < L; ++j )
-            {
-                int32_t x = X[j];
-                int32_t y = Y[j];
-                S += detector.data[ (x+detector.p)%detector.nt + y * detector.nf ];
-            }
+            S += detector->data[ 
+                ( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt +
+                (uint32_t)( y + detector->nf/2 ) * detector->nf 
+            ];
+            // printf("%u\n", detector->data[ 
+            //     ( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt +
+            //     (uint32_t)( y + detector->nf/2 ) * detector->nf 
+            // ]);
+        }
+        S /= L;
 
-            S /= L;
+        // Calculate the mean
+        float mean = 0;
+        for( uint32_t j = 0; j < detector->nt; ++j ) mean += detector->prevWeights[ j + i*detector->nAngles ];
+        mean /= detector->nt;
+
+        // Calculate the variance 
+        float variance = 0;
+        for( uint32_t j = 0; j < detector->nt; ++j ) variance += pow( detector->prevWeights[ j + i*detector->nAngles ] - mean , 2);
+        variance /= detector->nt;
+
+        // Update previous weights
+        detector->prevWeights[ detector->p + i*detector->nAngles ] = S;
+
+        // Was FRB detected
+        // printf("%f\n", S - (mean + sigma * sqrt( variance )));
+        if( S >= mean + sigma * sqrt( variance ) )
+        {
+            *angle = detector->angles[i];
+            detected = true;
         }
     }
 
-    return false;
+    detector->p += 1;
+    detector->p %= detector->nt;
+
+    return detected;
 }
 
 // Free the heap allocated memmory used by the detector structure
@@ -160,4 +187,5 @@ void freeDetector( DETECTFRB *detector )
     free( detector->xIntersections );
     free( detector->yIntersections );
     free( detector->data );
+    free( detector->prevWeights );
 }
