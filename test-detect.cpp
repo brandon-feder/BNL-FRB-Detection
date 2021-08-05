@@ -45,7 +45,7 @@ void brandonNthSample( uint32_t *sample, uint32_t n, uint32_t nf, uint32_t x1, u
 #define SAMPLE_FUNCTION brandonNthSample // The test function
 #define MAX_SAMPLE_WEIGHT 256 // The max weight of any given sample
 #define FRB_FACTOR 2 // The factor to multiply the FRB by so that it stands out ( > 1 )
-#define TEST_SIZE 10*512 // The number of time samples to run the test through ( > NTS )
+#define TEST_SIZE 10*512 // The number of time samples to run the test through ( > 3*NTS )
 #define NTS 128 // Number of time samples in buffer
 #define NFS 128 // Number of frequency samples per time sample
 #define N_ANGLES 200 // The number of angles used when detecting the FRB
@@ -57,13 +57,12 @@ int main(int argc, char *argv[])
     printf("Info: Program started\n");
 
     // Some usefull checks
-    assert(FRB_FACTOR > 1);
-    assert( TEST_SIZE > NTS );
+    assert( FRB_FACTOR > 1 );
+    assert( TEST_SIZE > 3*NTS );
 
     // Init random number generator
     printf("Info: Generating 'random' seed\n");
-    // srand(time(NULL));
-    srand(1);
+    srand(time(NULL));
 
     // Initialize the detector
     printf("Info: Creating instance of the detector\n");
@@ -105,7 +104,6 @@ int main(int argc, char *argv[])
         SAMPLE_FUNCTION( next, x, NFS, x1, y1, x2, y2 );
         bool isFRB = detectFRB( &detector, &angle, 7, x );
 
-        // printf("%p\n", next);
         if( isFRB && x > 2 * NTS ) 
         {
             printf( "FRB at %u and angle %f!\n", x - NTS/2, angle );

@@ -48,6 +48,9 @@ void pixelsOnSegment(
 }
 
 // Initialize the detection structure.
+//  - nt_ is the number of time channels ( and number of saved weights )
+//  - nf_ is the number of frequency channels 
+//  - nAngles_ is the number of angles that will be summed along
 DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t nAngles_ )
 {
     // Declare variables
@@ -110,11 +113,17 @@ DETECTFRB initDetector( uint32_t nt_, uint32_t nf_, uint32_t nAngles_ )
     return detector;
 }
 
+// Gets a pointer to the start of where the next frequency samples should be written
 uint32_t *nextData( DETECTFRB *detector )
 {
     return detector->data + detector->nf * detector->p;
 }
 
+// Detect and FRB in the current data
+// - detector is a pointer to an initialized detector object
+// - angle is a pointer to the angle of the FRB if it was detected
+// - count is used for debugging it can be ignored
+// - returns true if an FRB was detected otherwise false
 bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma, uint32_t count )
 {
     bool detected = false;
@@ -130,23 +139,16 @@ bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma, uint32_t coun
         float S = 0;
         for( uint32_t j = 0; j < L; ++j )
         {
-            int32_t x = X[j];
-            int32_t y = Y[j];
-
-            S += detector->data[ 
-                (uint32_t)( y + detector->nf/2 ) +
-                (( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt ) * detector->nf 
-            ];
+            int32_t x = X[j]; int32_t y = Y[j];
+            S += detector->data[(uint32_t)( y + detector->nf/2 ) + (( (uint32_t)( x + detector->nt/2 ) + detector->p )%detector->nt ) * detector->nf];
         }
         S /= L;
-        // printf("A\n");
 
         // Calculate the mean
         float mean = 0;
         for( uint32_t j = 0; j < detector->nt; ++j ) mean += detector->prevWeights[ j*detector->nAngles + i ];
         mean /= detector->nt;
 
-        // printf("B\n");
         // Calculate the variance 
         float variance = 0;
         for( uint32_t j = 0; j < detector->nt; ++j ) variance += pow( detector->prevWeights[ j*detector->nAngles + i ] - mean , 2);
@@ -161,7 +163,6 @@ bool detectFRB( DETECTFRB *detector, float *angle, uint32_t sigma, uint32_t coun
             *angle = detector->angles[i];
             detected = true;
         }
-        // printf("C\n");
     }
 
     detector->p += 1;
